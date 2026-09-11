@@ -154,7 +154,7 @@ export const triggerGameSave = async (
 	gameType = "minecraft",
 ): Promise<GameCommandResult> => {
 	const preset = GAME_PRESETS[gameType] || GAME_PRESETS.minecraft;
-	const saveCmd = preset.saveCommand;
+	const saveCmd = preset?.saveCommand || "save-all";
 	return await sendGameServerCommand(containerId, saveCmd, serverId, gameType);
 };
 
@@ -213,7 +213,7 @@ export const getGameServerStats = async (
 		const ports: string[] = [];
 		const portBindings = inspectData?.NetworkSettings?.Ports || {};
 		for (const [containerPort, hostBindings] of Object.entries(portBindings)) {
-			if (Array.isArray(hostBindings) && hostBindings.length > 0) {
+			if (Array.isArray(hostBindings) && hostBindings.length > 0 && hostBindings[0]?.HostPort) {
 				ports.push(`${hostBindings[0].HostPort} → ${containerPort}`);
 			}
 		}
@@ -308,9 +308,9 @@ export const listGameWorldBackups = async (
 
 		for (const line of lines) {
 			const parts = line.trim().split(/\s+/);
-			if (parts.length >= 7 && !parts[0].startsWith("total")) {
-				const size = parts[4];
-				const date = `${parts[5]} ${parts[6]}`;
+			if (parts.length >= 7 && parts[0] && !parts[0].startsWith("total")) {
+				const size = parts[4] || "0 B";
+				const date = `${parts[5] || ""} ${parts[6] || ""}`.trim();
 				const filename = parts.slice(7).join(" ");
 				if (filename.endsWith(".tar.gz")) {
 					items.push({

@@ -4,7 +4,7 @@ import { db } from "@dokploy/server/db";
 import { domains } from "@dokploy/server/db/schema/domain";
 import { execAsync, execAsyncRemote } from "@dokploy/server/utils/process/execAsync";
 import { manageDomain } from "@dokploy/server/utils/traefik/domain";
-import { addDomainToCompose } from "@dokploy/server/utils/traefik/compose";
+import { addDomainToCompose } from "@dokploy/server/utils/docker/domain";
 import { ensureSecurityMiddlewares } from "@dokploy/server/utils/traefik/middleware";
 import { eq, inArray } from "drizzle-orm";
 import { findApplicationById } from "./application";
@@ -371,15 +371,17 @@ export const toggleDomainSecurityMiddleware = async (
 
 	// Re-apply Traefik router config
 	if (domain.application) {
-		await manageDomain(domain.application, {
+		await manageDomain(domain.application as any, {
 			...domain,
 			middlewares: updatedList,
-		});
+		} as any);
 	} else if (domain.compose) {
-		await addDomainToCompose(domain.compose, {
-			...domain,
-			middlewares: updatedList,
-		});
+		await addDomainToCompose(domain.compose as any, [
+			{
+				...domain,
+				middlewares: updatedList,
+			} as any,
+		]);
 	}
 
 	return { success: true, middlewares: updatedList };

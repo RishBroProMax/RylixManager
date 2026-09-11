@@ -154,7 +154,7 @@ function resolveCredentials() {
 			});
 
 			// Initialize default webServerSettings if none exist
-			const existingSettings = await tx.query.webServerSettings.findFirst();
+			const existingSettings = await db.query.webServerSettings.findFirst();
 			if (!existingSettings) {
 				await tx.insert(webServerSettings).values({
 					id: nanoid(),
