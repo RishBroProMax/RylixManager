@@ -55,7 +55,7 @@ Whether you are hosting web services, managing PostgreSQL/MySQL/Redis clusters, 
 Run this one-line installer on any clean Linux VPS running **Ubuntu 20.04/22.04/24.04, Debian 11/12, Rocky Linux 9, AlmaLinux 9, or Fedora**:
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/rylixmanager/rylixmanager/main/install.sh | sh
+curl -sSL https://raw.githubusercontent.com/RishBroProMax/rylixmanager/main/install.sh | sh
 ```
 
 ### What the installer handles automatically:
