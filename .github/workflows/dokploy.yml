@@ -14,6 +14,9 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    env:
+      DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME || 'imrishmika' }}
+      DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -31,17 +34,14 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Log in to Docker Hub
-        if: "${{ secrets.DOCKERHUB_TOKEN != '' }}"
+        if: env.DOCKERHUB_TOKEN != ''
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME || 'imrishmika' }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          username: ${{ env.DOCKERHUB_USER }}
+          password: ${{ env.DOCKERHUB_TOKEN }}
 
       - name: Extract Version & Tags
         id: meta
-        env:
-          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME || 'imrishmika' }}
-          HAS_DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN != '' }}
         run: |
           VERSION=$(node -p "require('./apps/dokploy/package.json').version")
           REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
@@ -51,7 +51,7 @@ jobs:
             TAGS="ghcr.io/${REPO_LOWER}:canary"
           fi
           
-          if [ "$HAS_DOCKER_TOKEN" = "true" ]; then
+          if [ -n "$DOCKERHUB_TOKEN" ]; then
             TAGS="${TAGS},${DOCKERHUB_USER}/rylixmanager:latest,${DOCKERHUB_USER}/rylixmanager:${VERSION}"
             if [ "${{ github.ref }}" = "refs/heads/canary" ]; then
               TAGS="${TAGS},${DOCKERHUB_USER}/rylixmanager:canary"
