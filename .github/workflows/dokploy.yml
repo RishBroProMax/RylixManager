@@ -54,9 +54,9 @@ jobs:
             GHCR_TAGS="ghcr.io/${REPO_LOWER}:canary"
           fi
           
-          # If Docker Hub credentials exist and IMAGE_NAME is provided, add Docker Hub tags
+          # If Docker Hub credentials exist, add Docker Hub tags
           if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            GHCR_TAGS="${GHCR_TAGS},${{ secrets.DOCKERHUB_USERNAME }}/rylixmanager:latest"
+            GHCR_TAGS="${GHCR_TAGS},${{ secrets.DOCKERHUB_USERNAME }}/rylixmanager:latest,${{ secrets.DOCKERHUB_USERNAME }}/rylixmanager:${VERSION}"
           fi
           
           echo "version=${VERSION}" >> $GITHUB_OUTPUT

@@ -23,6 +23,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub (Optional)
+        if: "${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}"
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Set tag and version
         id: meta-schedule
         run: |
@@ -32,7 +39,11 @@ jobs:
           if [ "${{ github.ref }}" != "refs/heads/main" ]; then
             TAG="canary"
           fi
-          echo "tags=ghcr.io/${REPO_LOWER}-schedule:${TAG},ghcr.io/${REPO_LOWER}-schedule:${VERSION}" >> $GITHUB_OUTPUT
+          TAGS="ghcr.io/${REPO_LOWER}-schedule:${TAG},ghcr.io/${REPO_LOWER}-schedule:${VERSION}"
+          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+            TAGS="${TAGS},${{ secrets.DOCKERHUB_USERNAME }}/rylixmanager-schedule:${TAG}"
+          fi
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
       - name: Build and push Schedule image
         uses: docker/build-push-action@v5
@@ -56,6 +67,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Log in to Docker Hub (Optional)
+        if: "${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}"
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
       - name: Set tag and version
         id: meta-server
         run: |
@@ -65,7 +83,11 @@ jobs:
           if [ "${{ github.ref }}" != "refs/heads/main" ]; then
             TAG="canary"
           fi
-          echo "tags=ghcr.io/${REPO_LOWER}-server:${TAG},ghcr.io/${REPO_LOWER}-server:${VERSION}" >> $GITHUB_OUTPUT
+          TAGS="ghcr.io/${REPO_LOWER}-server:${TAG},ghcr.io/${REPO_LOWER}-server:${VERSION}"
+          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
+            TAGS="${TAGS},${{ secrets.DOCKERHUB_USERNAME }}/rylixmanager-server:${TAG}"
+          fi
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
       - name: Build and push Server image
         uses: docker/build-push-action@v5
