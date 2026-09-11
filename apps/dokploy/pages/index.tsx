@@ -297,20 +297,25 @@ export default function Home({ IS_CLOUD, enforceSSO }: Props) {
 		<>
 			<div className="flex flex-col space-y-2 text-center">
 				<h1 className="text-2xl font-semibold tracking-tight">
-					<div className="flex flex-row items-center justify-center gap-2">
-						<Logo
-							className="size-12"
-							logoUrl={
-								whitelabeling?.loginLogoUrl ||
-								whitelabeling?.logoUrl ||
-								undefined
-							}
-						/>
-						Sign in
+					<div className="flex flex-col items-center justify-center gap-1">
+						<div className="flex flex-row items-center justify-center gap-2">
+							<Logo
+								className="size-12"
+								logoUrl={
+									whitelabeling?.loginLogoUrl ||
+									whitelabeling?.logoUrl ||
+									undefined
+								}
+							/>
+							<span className="font-bold">RylixManager</span>
+						</div>
+						<span className="text-xs font-medium text-muted-foreground tracking-wide">
+							Reimagined Version of Dokploy
+						</span>
 					</div>
 				</h1>
 				<p className="text-sm text-muted-foreground">
-					Enter your email and password to sign in
+					Enter your administrator credentials to sign in
 				</p>
 			</div>
 			{error && (

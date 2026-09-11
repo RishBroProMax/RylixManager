@@ -265,11 +265,13 @@ export function processVercelAnalytics(
 		// Paths (normalize query params for grouping)
 		const rawPath = entry.RequestPath || "/";
 		const cleanPath = rawPath.split("?")[0] || "/";
-		if (!pathCounts[cleanPath]) {
-			pathCounts[cleanPath] = { count: 0, durations: [] };
+		let pathData = pathCounts[cleanPath];
+		if (!pathData) {
+			pathData = { count: 0, durations: [] };
+			pathCounts[cleanPath] = pathData;
 		}
-		pathCounts[cleanPath].count++;
-		pathCounts[cleanPath].durations.push(durMs);
+		pathData.count++;
+		pathData.durations.push(durMs);
 
 		// User agent analytics
 		const ua = entry.request_User_Agent || "";
@@ -283,17 +285,20 @@ export function processVercelAnalytics(
 		deviceCounts[device] = (deviceCounts[device] || 0) + 1;
 
 		// Clients
-		if (!clientMap[ip]) {
-			clientMap[ip] = { count: 0, bytes: 0 };
+		let clientData = clientMap[ip];
+		if (!clientData) {
+			clientData = { count: 0, bytes: 0 };
+			clientMap[ip] = clientData;
 		}
-		clientMap[ip].count++;
-		clientMap[ip].bytes += bytes;
+		clientData.count++;
+		clientData.bytes += bytes;
 
 		// Time Bucket (hourly)
 		const entryDate = new Date(entry.StartUTC || entry.time);
 		const bucketKey = `${entryDate.toISOString().slice(0, 13)}:00:00Z`;
-		if (!timeBuckets[bucketKey]) {
-			timeBuckets[bucketKey] = {
+		let bucketData = timeBuckets[bucketKey];
+		if (!bucketData) {
+			bucketData = {
 				total: 0,
 				status2xx: 0,
 				status3xx: 0,
@@ -301,14 +306,15 @@ export function processVercelAnalytics(
 				status5xx: 0,
 				durations: [],
 			};
+			timeBuckets[bucketKey] = bucketData;
 		}
 
-		timeBuckets[bucketKey].total++;
-		timeBuckets[bucketKey].durations.push(durMs);
-		if (status >= 200 && status < 300) timeBuckets[bucketKey].status2xx++;
-		else if (status >= 300 && status < 400) timeBuckets[bucketKey].status3xx++;
-		else if (status >= 400 && status < 500) timeBuckets[bucketKey].status4xx++;
-		else if (status >= 500) timeBuckets[bucketKey].status5xx++;
+		bucketData.total++;
+		bucketData.durations.push(durMs);
+		if (status >= 200 && status < 300) bucketData.status2xx++;
+		else if (status >= 300 && status < 400) bucketData.status3xx++;
+		else if (status >= 400 && status < 500) bucketData.status4xx++;
+		else if (status >= 500) bucketData.status5xx++;
 	}
 
 	// Percentiles
@@ -321,11 +327,11 @@ export function processVercelAnalytics(
 			: 0;
 	const p75LatencyMs =
 		durationsMs.length > 0
-			? durationsMs[Math.floor(durationsMs.length * 0.75)]
+			? (durationsMs[Math.floor(durationsMs.length * 0.75)] ?? 0)
 			: 0;
 	const p95LatencyMs =
 		durationsMs.length > 0
-			? durationsMs[Math.floor(durationsMs.length * 0.95)]
+			? (durationsMs[Math.floor(durationsMs.length * 0.95)] ?? 0)
 			: 0;
 
 	// Summary
@@ -347,6 +353,18 @@ export function processVercelAnalytics(
 	);
 	const timeSeries: AnalyticsTimeSeriesPoint[] = sortedBucketKeys.map((key) => {
 		const b = timeBuckets[key];
+		if (!b) {
+			return {
+				timestamp: key,
+				displayLabel: "",
+				total: 0,
+				status2xx: 0,
+				status3xx: 0,
+				status4xx: 0,
+				status5xx: 0,
+				avgDurationMs: 0,
+			};
+		}
 		const avg =
 			b.durations.length > 0
 				? Math.round(

@@ -241,6 +241,12 @@ const MENU: Menu = {
 			isEnabled: ({ permissions, isCloud }) =>
 				!!(permissions?.docker.read && !isCloud),
 		},
+		{
+			isSingle: true,
+			title: "Documentation",
+			url: "/dashboard/docs",
+			icon: BookIcon,
+		},
 
 		// Legacy unused menu, adjusted to the new structure
 		// {

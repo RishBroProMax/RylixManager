@@ -27,7 +27,7 @@ print_banner() {
   ██╔══██╗  ╚██╔╝  ██║     ██║ ██╔██╗ 
   ██║  ██║   ██║   ███████╗██║██╔╝ ██╗
   ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝╚═╝  ╚═╝
-   M A N A G E R  —  Reimagined Dokploy VPS & PaaS Platform
+   M A N A G E R  —  Reimagined Dokploy & PaaS Platform
 
 EOF
 }
@@ -180,8 +180,8 @@ install_rylix() {
     print_banner
 
     VERSION_TAG=$(detect_version)
-    # Default to GHCR rylixmanager image (no Docker Hub secret required)
-    PRIMARY_IMAGE="ghcr.io/rishbropromax/rylixmanager:${VERSION_TAG}"
+    PRIMARY_IMAGE="imrishmika/rylixmanager:${VERSION_TAG}"
+    FALLBACK_IMAGE="ghcr.io/rishbropromax/rylixmanager:${VERSION_TAG}"
     DOCKER_IMAGE="${RYLIX_IMAGE:-$PRIMARY_IMAGE}"
     
     printf "${CYAN}=== Starting RylixManager Installation (${VERSION_TAG}) ===${NC}\n\n"
@@ -307,20 +307,19 @@ EOF
     printf "${BLUE}→ Checking RylixManager container image (${DOCKER_IMAGE})...${NC}\n"
     if ! docker pull "$DOCKER_IMAGE"; then
         printf "${YELLOW}Notice: Primary image '${DOCKER_IMAGE}' could not be pulled directly.${NC}\n"
-        if [ -f "./Dockerfile" ]; then
-            printf "${CYAN}→ Local Dockerfile found! Building RylixManager locally from source...${NC}\n"
-            docker build -t rylixmanager:latest .
-            DOCKER_IMAGE="rylixmanager:latest"
-        else
-            # Try pulling latest tag or fallback
-            printf "${CYAN}→ Attempting fallback image: ghcr.io/rishbropromax/rylixmanager:latest...${NC}\n"
-            if ! docker pull ghcr.io/rishbropromax/rylixmanager:latest; then
+        printf "${CYAN}→ Trying GHCR fallback: ${FALLBACK_IMAGE}...${NC}\n"
+        if ! docker pull "$FALLBACK_IMAGE"; then
+            if [ -f "./Dockerfile" ]; then
+                printf "${CYAN}→ Local Dockerfile found! Building RylixManager locally from source...${NC}\n"
+                docker build -t rylixmanager:latest .
+                DOCKER_IMAGE="rylixmanager:latest"
+            else
                 printf "${YELLOW}→ Registry image pending. Using reliable base container engine...${NC}\n"
                 docker pull dokploy/dokploy:latest
                 DOCKER_IMAGE="dokploy/dokploy:latest"
-            else
-                DOCKER_IMAGE="ghcr.io/rishbropromax/rylixmanager:latest"
             fi
+        else
+            DOCKER_IMAGE="$FALLBACK_IMAGE"
         fi
     fi
     printf "${GREEN}✓ RylixManager container image ready: ${DOCKER_IMAGE}${NC}\n"

@@ -1,15 +1,14 @@
 <div align="center">
 
 # ⚡ RylixManager
-
-### **The Enterprise-Grade Self-Hosted Cloud PaaS, VPS Orchestrator & Pterodactyl-Class Game Server Control Panel**
+### **Dokploy Reimagined — Enterprise-Grade Self-Hosted Cloud PaaS, VPS Orchestrator & Pterodactyl-Class Game Server Control Panel**
 
 <p align="center">
   <img src="https://img.shields.io/badge/Platform-Linux%20%7C%20AMD64%20%7C%20ARM64-black?style=for-the-badge&logo=linux" alt="Platform" />
   <img src="https://img.shields.io/badge/Docker-Swarm%20%26%20Engine-black?style=for-the-badge&logo=docker" alt="Docker" />
   <img src="https://img.shields.io/badge/Reverse%20Proxy-Traefik%20v3-black?style=for-the-badge&logo=traefik" alt="Traefik" />
   <img src="https://img.shields.io/badge/Enterprise-100%25%20Unlocked-emerald?style=for-the-badge" alt="Enterprise Unlocked" />
-  <img src="https://img.shields.io/badge/Node.js-20+-black?style=for-the-badge&logo=nodedotjs" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Dokploy-Reimagined-blue?style=for-the-badge" alt="Dokploy Reimagined" />
   <img src="https://img.shields.io/badge/License-MIT-black?style=for-the-badge" alt="License" />
 </p>
 
@@ -19,16 +18,14 @@
 
 <p align="center">
   <a href="#-quick-install">Quick Install</a> •
+  <a href="#-built-in-documentation">Documentation</a> •
   <a href="#-key-features">Key Features</a> •
   <a href="#-game-server-control-panel">Game Control Panel</a> •
   <a href="#-vercel-style-traffic-analytics">Traffic Analytics</a> •
   <a href="#-layer-7-traffic-security">Traffic Security</a> •
   <a href="#-linux-host-os-hardening">Host Hardening</a> •
-  <a href="#-domain-setup--ssl">Domain & SSL</a> •
-  <a href="#-port-matrix">Port Matrix</a> •
-  <a href="#-full-troubleshooting--error-fixing-guide">Troubleshooting & Errors</a> •
-  <a href="#-backup-restore--migration">Backups & Migration</a> •
-  <a href="#-uninstallation">Uninstallation</a>
+  <a href="#-uninstallation">Uninstallation</a> •
+  <a href="#-credits--attributions">Credits & Attributions</a>
 </p>
 
 </div>
@@ -37,16 +34,18 @@
 
 ## 🌟 What is RylixManager?
 
-**RylixManager** is a modern, open-source Developer Platform as a Service (PaaS) and VPS management control deck that transforms any Linux server or distributed cluster into an automated cloud environment. 
+**RylixManager** is an enterprise-grade reimagining of **Dokploy**, designed for developers, system administrators, and game hosting providers who require full architectural freedom, high-speed automated installation, native game server orchestration, and deep Linux kernel tuning.
 
 Whether you are hosting web services, managing PostgreSQL/MySQL/Redis clusters, deploying Docker Compose stacks, or running production gaming infrastructure (Minecraft, Rust, Palworld, Counter-Strike 2, Valheim), RylixManager delivers:
 
 1. **Zero-Lock-in Application Orchestration**: Git push deployments, Dockerfile builds, Nixpacks, and Docker Compose with automatic HTTPS.
 2. **Pterodactyl-Grade Game Control Panel**: Complete gaming suite with interactive Web TTY terminal, 1-click Mod/Plugin Marketplace, visual MOTD editor, atomic world backup snapshots, and multi-protocol proxy routing.
-3. **Vercel-Style Traffic Analytics**: Real-time traffic volume, visitor geography, edge latency percentiles (p75/p95), status code distributions, User-Agent breakdowns, and live request inspector.
-4. **Built-in Layer 7 Traffic Manager & Traefik Security Deck**: OWASP strict headers, DDoS rate limiters, connection caps, and response compression for all domains with 1-click toggles.
-5. **Linux Host OS & Kernel Tuning**: Automated sysctl network socket optimization (25MB UDP/TCP buffers), Google BBR congestion control, somaxconn listen backlogs, and Docker daemon log rotation safeguards.
-6. **100% Unlocked Enterprise Suite**: Whitelabeling, Single Sign-On (SSO), Custom RBAC permissions, audit logging, and multi-server management available out-of-the-box with no license keys required.
+3. **Instant Terminal Admin Creation**: Configure your master administrator account (Name, Email, Password) directly in the terminal during installation—no blank-slate browser surprises.
+4. **Vercel-Style Traffic Analytics**: Real-time traffic volume, visitor geography, edge latency percentiles (p75/p95), status code distributions, User-Agent breakdowns, and live request inspector.
+5. **Built-in Layer 7 Traffic Manager & Traefik Security Deck**: OWASP strict headers, DDoS rate limiters, connection caps, and response compression for all domains with 1-click toggles.
+6. **Linux Host OS & Kernel Tuning**: Automated sysctl network socket optimization (25MB UDP/TCP buffers), Google BBR congestion control, somaxconn listen backlogs, and Docker daemon log rotation safeguards.
+7. **100% Unlocked Enterprise Suite**: Whitelabeling, Single Sign-On (SSO), Custom RBAC permissions, audit logging, and multi-server management available out-of-the-box with no license keys required.
+8. **Built-in Documentation Deck**: Native `/dashboard/docs` page embedded directly in the panel.
 
 ---
 
@@ -58,20 +57,34 @@ Run this one-line installer on any clean Linux VPS running **Ubuntu 20.04/22.04/
 curl -sSL https://raw.githubusercontent.com/RishBroProMax/rylixmanager/main/install.sh | sh
 ```
 
-### What the installer handles automatically:
-- ✅ Installs Docker Engine and activates Docker Swarm mode.
-- ✅ Creates the high-performance overlay networks (`rylix-network` & `dokploy-network`).
-- ✅ Configures Traefik v3 reverse proxy with Let's Encrypt automated SSL.
-- ✅ Applies Linux kernel performance hardening (`99-rylix-performance.conf` with 25MB socket buffers & Google BBR).
-- ✅ Configures Docker daemon log rotation (`max-size: 50m`, `max-file: 3`) to prevent disk saturation.
-- ✅ Configures UFW firewall baseline rules (Ports 22, 80, 443, 3000).
-- ✅ Starts the RylixManager web control deck.
+### What happens during installation:
+1. **Interactive Admin Account Prompt**: The terminal will ask you for:
+   - `Admin First Name` (e.g., John)
+   - `Admin Last Name` (e.g., Doe)
+   - `Admin Email` (e.g., admin@example.com)
+   - `Admin Password` (min 8 characters, confirmed with hidden input)
+   *(These credentials immediately become your master login details).*
+2. **Fast & Non-Blocking Image Setup**: Uses GitHub Container Registry (`ghcr.io`) with real-time download progress so your VPS never hangs or freezes.
+3. **Automatic Swarm & Network Provisioning**: Activates Docker Swarm mode and provisions the `rylix-network` overlay mesh.
+4. **Traefik v3 Reverse Proxy**: Deploys reverse proxy on ports 80 & 443 with automated Let's Encrypt SSL.
+5. **Kernel Performance Hardening**: Applies `99-rylix-performance.conf` with 25MB socket buffers & Google BBR.
 
-Once the script completes, open your browser and access:
+Once the installer completes, open your browser and access:
 ```text
 http://<YOUR_SERVER_IP>:3000
 ```
-*(Allow 15–20 seconds on first launch for database migrations and initial service initialization).*
+Log in immediately using the Email and Password you configured in the terminal!
+
+---
+
+## 📖 Built-in Documentation
+
+RylixManager includes a complete, interactive documentation deck embedded directly inside the panel at:
+```text
+http://<YOUR_SERVER_IP>:3000/dashboard/docs
+```
+Accessible from the sidebar navigation, providing guides for Git deployments, game server configurations, custom domain SSL certificates, database clustering, and security tuning.
+
 
 ---
 
@@ -484,7 +497,7 @@ sudo tar -czvf rylix-full-backup-$(date +%F).tar.gz /etc/dokploy
    ```
 3. Run the installer to reconnect services:
    ```bash
-   curl -sSL https://raw.githubusercontent.com/rylixmanager/rylixmanager/main/install.sh | sh
+   curl -sSL https://raw.githubusercontent.com/RishBroProMax/rylixmanager/main/install.sh | sh
    ```
 All configurations, users, and game volumes will be restored seamlessly.
 
@@ -494,15 +507,15 @@ All configurations, users, and game volumes will be restored seamlessly.
 
 To safely uninstall RylixManager, Traefik, and associated services:
 
-### 1. Interactive Uninstallation (Preserves Configuration & Data)
+### 1. One-Line Automated Uninstaller
 ```bash
-sudo bash uninstall.sh
+curl -sSL https://raw.githubusercontent.com/RishBroProMax/rylixmanager/main/uninstall.sh | sh
 ```
-*Stops all services and containers while keeping `/etc/dokploy` intact for future reinstallation.*
+*Prompts interactively to preserve or purge data. Stops Swarm services, removes overlay networks, and cleans up Docker secrets.*
 
 ### 2. Complete Purge (Deletes All Data, Databases, and Volumes)
 ```bash
-sudo bash uninstall.sh --purge-data --remove-kernel-tuning --force
+curl -sSL https://raw.githubusercontent.com/RishBroProMax/rylixmanager/main/uninstall.sh | sh -s -- --purge-data --force
 ```
 
 ---
@@ -517,11 +530,29 @@ bash install.sh update
 
 Or execute directly through Docker Swarm:
 ```bash
-docker service update --image rylixmanager/rylixmanager:latest --force rylix-manager
+docker service update --image ghcr.io/rishbropromax/rylixmanager:latest --force rylix-manager
 ```
+
+---
+
+## ❤️ Credits & Attributions
+
+**RylixManager is a reimagined edition of [Dokploy](https://github.com/Dokploy/dokploy).**
+
+We extend our deepest respect, admiration, and gratitude to:
+- **Mauricio (@siumauricio)** — The visionary creator and lead architect of Dokploy.
+- **The Entire Dokploy Community & Open-Source Contributors** — For building an exceptionally elegant, resilient, and developer-friendly PaaS foundation.
+
+### How RylixManager builds upon Dokploy:
+- **Pterodactyl-Class Gaming Control Panel**: Integrated dedicated game server orchestration (Minecraft, Rust, Palworld, Valheim, CS2) with live Web TTY, 1-click mod marketplace, and atomic world backups.
+- **Linux Kernel & Network Tuning**: Automated host optimization applying 25MB high-throughput UDP/TCP buffers, Google BBR congestion control, and connection backlogs.
+- **Interactive Terminal Admin Setup**: Instant administrator creation directly during installation for seamless first login.
+- **Built-in Native Documentation**: Complete offline-capable docs deck embedded at `/dashboard/docs`.
+- **100% Free & Unlocked**: Enterprise RBAC, audit logging, and whitelabeling permanently unlocked under the MIT License.
 
 ---
 
 ## 📄 License
 
-RylixManager is open-source software licensed under the **MIT License**. All enterprise and proprietary modules are permanently unlocked for self-hosted community operators.
+RylixManager is open-source software licensed under the **MIT License**. All enterprise modules and features are permanently free and open for self-hosted community operators.
+

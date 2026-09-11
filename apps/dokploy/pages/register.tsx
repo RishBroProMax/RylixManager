@@ -127,7 +127,7 @@ const Register = ({ isCloud }: Props) => {
 		<div className="">
 			<div className="flex  w-full items-center justify-center ">
 				<div className="flex flex-col items-center gap-4 w-full">
-					<CardTitle className="text-2xl font-bold flex  items-center gap-2">
+					<CardTitle className="text-2xl font-bold flex flex-col items-center gap-1">
 						<Link href="/" className="flex flex-row items-center gap-2">
 							<Logo
 								className="size-12"
@@ -137,12 +137,15 @@ const Register = ({ isCloud }: Props) => {
 									undefined
 								}
 							/>
+							<span>RylixManager</span>
 						</Link>
-						{isCloud ? "Sign Up" : "Setup the server"}
+						<span className="text-xs font-medium text-muted-foreground tracking-wide">
+							Reimagined Version of Dokploy — {isCloud ? "Sign Up" : "Initial Server Setup"}
+						</span>
 					</CardTitle>
 					<CardDescription>
-						Enter your email and password to{" "}
-						{isCloud ? "create an account" : "setup the server"}
+						Enter your details to{" "}
+						{isCloud ? "create an account" : "configure your master administrator account"}
 					</CardDescription>
 					<div className="mx-auto w-full max-w-lg bg-transparent">
 						{isError && (
