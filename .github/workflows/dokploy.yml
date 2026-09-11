@@ -11,9 +11,6 @@ permissions:
   contents: write
   packages: write
 
-env:
-  GHCR_IMAGE: ghcr.io/${{ github.repository }}
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -22,9 +19,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -36,31 +30,36 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Log in to Docker Hub (Optional)
-        if: "${{ secrets.DOCKERHUB_USERNAME != '' && secrets.DOCKERHUB_TOKEN != '' }}"
+      - name: Log in to Docker Hub
+        if: "${{ secrets.DOCKERHUB_TOKEN != '' }}"
         uses: docker/login-action@v3
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          username: ${{ secrets.DOCKERHUB_USERNAME || 'imrishmika' }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Extract Version & Tags
         id: meta
+        env:
+          DOCKERHUB_USER: ${{ secrets.DOCKERHUB_USERNAME || 'imrishmika' }}
+          HAS_DOCKER_TOKEN: ${{ secrets.DOCKERHUB_TOKEN != '' }}
         run: |
           VERSION=$(node -p "require('./apps/dokploy/package.json').version")
           REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          GHCR_TAGS="ghcr.io/${REPO_LOWER}:latest,ghcr.io/${REPO_LOWER}:${VERSION}"
+          TAGS="ghcr.io/${REPO_LOWER}:latest,ghcr.io/${REPO_LOWER}:${VERSION}"
           
           if [ "${{ github.ref }}" = "refs/heads/canary" ]; then
-            GHCR_TAGS="ghcr.io/${REPO_LOWER}:canary"
+            TAGS="ghcr.io/${REPO_LOWER}:canary"
           fi
           
-          # If Docker Hub credentials exist, add Docker Hub tags
-          if [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ]; then
-            GHCR_TAGS="${GHCR_TAGS},${{ secrets.DOCKERHUB_USERNAME }}/rylixmanager:latest,${{ secrets.DOCKERHUB_USERNAME }}/rylixmanager:${VERSION}"
+          if [ "$HAS_DOCKER_TOKEN" = "true" ]; then
+            TAGS="${TAGS},${DOCKERHUB_USER}/rylixmanager:latest,${DOCKERHUB_USER}/rylixmanager:${VERSION}"
+            if [ "${{ github.ref }}" = "refs/heads/canary" ]; then
+              TAGS="${TAGS},${DOCKERHUB_USER}/rylixmanager:canary"
+            fi
           fi
           
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          echo "tags=${GHCR_TAGS}" >> $GITHUB_OUTPUT
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
 
       - name: Prepare Environment Files
         run: |
@@ -72,12 +71,12 @@ jobs:
             touch apps/dokploy/.env.production
           fi
 
-      - name: Build & Push Multi-Arch Docker Image
+      - name: Build & Push Docker Image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           cache-from: type=gha
