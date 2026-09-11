@@ -29,6 +29,7 @@ try {
 				"reset-password": "reset-password.ts",
 				"reset-2fa": "reset-2fa.ts",
 				"migrate-auth-secret": "scripts/migrate-auth-secret.ts",
+				"seed-admin": "seed-admin.ts",
 			},
 			bundle: true,
 			platform: "node",

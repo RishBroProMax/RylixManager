@@ -1,12 +1,12 @@
 #!/bin/bash
 # ==============================================================================
-#  RylixManager - Linux VPS Uninstallation & Cleanup Script
-#  Usage: bash uninstall.sh [--purge-data] [--force]
+#  RylixManager — Linux VPS Uninstallation & Cleanup Utility
+#  One-Line Uninstaller: curl -sSL https://raw.githubusercontent.com/RishBroProMax/rylixmanager/main/uninstall.sh | sh
 # ==============================================================================
 
 set -e
 
-# Terminal colors
+# Terminal styling
 BOLD="\033[1m"
 GREEN="\033[0;32m"
 BLUE="\033[0;34m"
@@ -17,40 +17,42 @@ NC="\033[0m"
 
 print_banner() {
     cat << "EOF"
+
   ██████╗ ██╗   ██╗██╗     ██╗██╗  ██╗
   ██╔══██╗╚██╗ ██╔╝██║     ██║╚██╗██╔╝
   ██████╔╝ ╚████╔╝ ██║     ██║ ╚███╔╝ 
   ██╔══██╗  ╚██╔╝  ██║     ██║ ██╔██╗ 
   ██║  ██║   ██║   ███████╗██║██╔╝ ██╗
   ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝╚═╝  ╚═╝
-   UNINSTALLATION & CLEANUP UTILITY
+   M A N A G E R  —  Uninstallation & Cleanup Utility
+
 EOF
 }
 
 FORCE=false
 PURGE_DATA=false
-REMOVE_KERNEL_TUNING=false
+REMOVE_KERNEL_TUNING=true
 
-# Parse command line flags
+# Parse flags
 for arg in "$@"; do
     case "$arg" in
-        -f|--force)
+        -f|--force|-y|--yes)
             FORCE=true
             ;;
         --purge-data)
             PURGE_DATA=true
             ;;
-        --remove-kernel-tuning)
-            REMOVE_KERNEL_TUNING=true
+        --keep-kernel-tuning)
+            REMOVE_KERNEL_TUNING=false
             ;;
         --help|-h)
             print_banner
             printf "Usage: bash uninstall.sh [OPTIONS]\n\n"
             printf "Options:\n"
-            printf "  -f, --force               Skip confirmation prompts (non-interactive mode)\n"
-            printf "  --purge-data              Permanently delete all configuration, database volumes, and game data\n"
-            printf "  --remove-kernel-tuning    Remove /etc/sysctl.d/99-rylix-performance.conf\n"
-            printf "  -h, --help                Display this help message\n"
+            printf "  -y, -f, --force, --yes      Skip confirmation prompt (non-interactive mode)\n"
+            printf "  --purge-data                Permanently delete database volumes and /etc/rylix, /etc/dokploy\n"
+            printf "  --keep-kernel-tuning        Keep /etc/sysctl.d/99-rylix-performance.conf in place\n"
+            printf "  -h, --help                  Display this help message\n\n"
             exit 0
             ;;
     esac
@@ -60,19 +62,19 @@ print_banner
 
 # Require root
 if [ "$(id -u)" -ne 0 ]; then
-    printf "${RED}Error: This uninstaller must be executed as root (or with sudo).${NC}\n" >&2
+    printf "${RED}Error: This uninstaller must be executed as root (use sudo).${NC}\n" >&2
     exit 1
 fi
 
 if [ "$FORCE" = false ]; then
-    printf "${YELLOW}WARNING: This will terminate RylixManager, Traefik proxy, and related platform services.${NC}\n"
+    printf "${YELLOW}WARNING: This will stop and remove RylixManager, Traefik, and all managed platform services.${NC}\n"
     if [ "$PURGE_DATA" = true ]; then
-        printf "${RED}CRITICAL: --purge-data is active. All database records and configs in /etc/dokploy will be DELETED.${NC}\n"
+        printf "${RED}CRITICAL: --purge-data is selected. All database records and configs will be DELETED permanently.${NC}\n"
     else
-        printf "${CYAN}Note: Application configuration and game server data in /etc/dokploy will be PRESERVED.${NC}\n"
+        printf "${CYAN}Note: Application configuration and database storage will be PRESERVED.${NC}\n"
     fi
     printf "\n"
-    read -p "Are you sure you want to proceed with uninstallation? (y/N): " -r CONFIRM
+    read -p "Are you sure you want to proceed with uninstallation? (y/N): " -r CONFIRM </dev/tty || CONFIRM="y"
     case "$CONFIRM" in
         [yY][eE][sS]|[yY])
             ;;
@@ -98,27 +100,31 @@ docker secret rm rylix_postgres_password 2>/dev/null || true
 docker secret rm dokploy_postgres_password 2>/dev/null || true
 docker secret rm rylix_auth_secret 2>/dev/null || true
 docker secret rm dokploy_auth_secret 2>/dev/null || true
+docker secret rm rylix_admin_email 2>/dev/null || true
+docker secret rm rylix_admin_password 2>/dev/null || true
+docker secret rm rylix_admin_name 2>/dev/null || true
+docker secret rm rylix_admin_last_name 2>/dev/null || true
 
 docker network rm rylix-network 2>/dev/null || true
 docker network rm dokploy-network 2>/dev/null || true
 
-if [ "$PURGE_DATA" = true ]; then
-    printf "${RED}→ Purging /etc/dokploy, /etc/rylix, and database volumes...${NC}\n"
-    rm -rf /etc/dokploy
-    rm -rf /etc/rylix
-    docker volume rm dokploy 2>/dev/null || true
-    docker volume rm dokploy-postgres 2>/dev/null || true
-    printf "${GREEN}✓ Persistent directories and database volumes removed.${NC}\n"
-else
-    printf "${YELLOW}→ Preserving configuration and volume data in /etc/dokploy.${NC}\n"
-    printf "  (To completely delete data later, run: rm -rf /etc/dokploy /etc/rylix)\n"
-fi
-
+# Remove Kernel Tuning if requested
 if [ "$REMOVE_KERNEL_TUNING" = true ]; then
-    printf "${CYAN}→ Removing sysctl kernel performance configuration...${NC}\n"
+    printf "${CYAN}→ Removing kernel tuning profile (/etc/sysctl.d/99-rylix-performance.conf)...${NC}\n"
     rm -f /etc/sysctl.d/99-rylix-performance.conf
     sysctl --system >/dev/null 2>&1 || true
-    printf "${GREEN}✓ Kernel settings restored.${NC}\n"
+fi
+
+# Purge data directories and Docker volumes if requested
+if [ "$PURGE_DATA" = true ]; then
+    printf "${RED}→ Purging configuration directories and Docker data volumes...${NC}\n"
+    rm -rf /etc/rylix
+    rm -rf /etc/dokploy
+    docker volume rm dokploy-postgres 2>/dev/null || true
+    docker volume rm dokploy 2>/dev/null || true
+    printf "${GREEN}✓ All persistent configuration and database volumes purged.${NC}\n"
+else
+    printf "${CYAN}✓ Configurations preserved in /etc/rylix and /etc/dokploy.${NC}\n"
 fi
 
 printf "\n"
@@ -126,7 +132,6 @@ printf "${GREEN}═════════════════════�
 printf "${BOLD}${GREEN}  RylixManager has been uninstalled successfully.${NC}\n"
 printf "${GREEN}═══════════════════════════════════════════════════════════${NC}\n\n"
 if [ "$PURGE_DATA" = false ]; then
-    printf "Your data remains safely stored at ${CYAN}/etc/dokploy${NC}.\n"
-    printf "To reinstall at any time, run:\n"
-    printf "  ${YELLOW}curl -sSL https://raw.githubusercontent.com/rylixmanager/rylixmanager/main/install.sh | sh${NC}\n\n"
+    printf "To re-install RylixManager and resume using your existing data, run:\n"
+    printf "  ${CYAN}curl -sSL https://raw.githubusercontent.com/RishBroProMax/rylixmanager/main/install.sh | sh${NC}\n\n"
 fi

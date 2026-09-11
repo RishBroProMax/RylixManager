@@ -72,5 +72,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
 # tini reaps HEALTHCHECK child processes that Node (as PID 1) leaves defunct.
 ENTRYPOINT ["/usr/bin/tini", "--"]
 
-# Ejecutar node directamente: pnpm como wrapper queda residente (~100MB RSS)
-  CMD ["sh", "-c", "node -r dotenv/config dist/wait-for-postgres.mjs && node -r dotenv/config dist/migration.mjs && exec node -r dotenv/config dist/server.mjs"]
+# Run wait-for-postgres, run migrations, seed admin credentials if provided, then start server
+CMD ["sh", "-c", "node -r dotenv/config dist/wait-for-postgres.mjs && node -r dotenv/config dist/migration.mjs && node -r dotenv/config dist/seed-admin.mjs && exec node -r dotenv/config dist/server.mjs"]

@@ -1,7 +1,7 @@
 #!/bin/bash
 # ==============================================================================
-#  RylixManager - Linux VPS Installation & Deployment Script
-#  One-Line Installer: curl -sSL https://raw.githubusercontent.com/<USER>/RylixManager/main/install.sh | sh
+#  RylixManager — Reimagined Dokploy PaaS & Game Server Platform
+#  One-Line Installer: curl -sSL https://raw.githubusercontent.com/RishBroProMax/rylixmanager/main/install.sh | sh
 # ==============================================================================
 
 set -e
@@ -27,7 +27,7 @@ print_banner() {
   ██╔══██╗  ╚██╔╝  ██║     ██║ ██╔██╗ 
   ██║  ██║   ██║   ███████╗██║██╔╝ ██╗
   ╚═╝  ╚═╝   ╚═╝   ╚══════╝╚═╝╚═╝  ╚═╝
-   M A N A G E R  —  Next-Gen VPS Platform
+   M A N A G E R  —  Reimagined Dokploy VPS & PaaS Platform
 
 EOF
 }
@@ -37,11 +37,8 @@ detect_version() {
     local version="${RYLIX_VERSION:-${DOKPLOY_VERSION}}"
     
     if [ -z "$version" ]; then
-        echo "Detecting latest stable release..." >&2
-        
-        # Try to get latest release from GitHub releases if available
-        version=$(curl -fsSL --connect-timeout 10 -o /dev/null -w '%{url_effective}\n' \
-            https://github.com/rylixmanager/rylixmanager/releases/latest 2>/dev/null | \
+        version=$(curl -fsSL --connect-timeout 5 -o /dev/null -w '%{url_effective}\n' \
+            https://github.com/RishBroProMax/rylixmanager/releases/latest 2>/dev/null | \
             sed 's#.*/tag/##')
 
         case "$version" in
@@ -88,15 +85,15 @@ generate_random_password() {
 
 get_ip() {
     local ip=""
-    ip=$(curl -4s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
+    ip=$(curl -4s --connect-timeout 4 https://ifconfig.io 2>/dev/null)
     if [ -z "$ip" ]; then
-        ip=$(curl -4s --connect-timeout 5 https://icanhazip.com 2>/dev/null)
+        ip=$(curl -4s --connect-timeout 4 https://icanhazip.com 2>/dev/null)
     fi
     if [ -z "$ip" ]; then
-        ip=$(curl -4s --connect-timeout 5 https://ipecho.net/plain 2>/dev/null)
+        ip=$(curl -4s --connect-timeout 4 https://ipecho.net/plain 2>/dev/null)
     fi
     if [ -z "$ip" ]; then
-        ip=$(curl -6s --connect-timeout 5 https://ifconfig.io 2>/dev/null)
+        ip=$(curl -6s --connect-timeout 4 https://ifconfig.io 2>/dev/null)
     fi
     if [ -z "$ip" ]; then
         echo "127.0.0.1"
@@ -122,11 +119,70 @@ format_ip_for_url() {
     fi
 }
 
+prompt_admin_account() {
+    printf "${CYAN}────────────────────────────────────────────────────────────${NC}\n"
+    printf "${BOLD}${GREEN}  Create Master Admin Account${NC}\n"
+    printf "  These credentials will allow you to log in to RylixManager\n"
+    printf "${CYAN}────────────────────────────────────────────────────────────${NC}\n\n"
+
+    # Support pre-configured environment variables for automated deployment
+    if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
+        ADMIN_NAME="${ADMIN_NAME:-Admin}"
+        ADMIN_LAST_NAME="${ADMIN_LAST_NAME:-User}"
+        printf "${GREEN}✓ Using pre-configured admin account:${NC} ${ADMIN_EMAIL}\n\n"
+        return
+    fi
+
+    # Read Name
+    read -p "Enter Admin First Name [Admin]: " input_name </dev/tty || true
+    ADMIN_NAME="${input_name:-Admin}"
+
+    read -p "Enter Admin Last Name [User]: " input_lastname </dev/tty || true
+    ADMIN_LAST_NAME="${input_lastname:-User}"
+
+    # Read Email
+    while true; do
+        read -p "Enter Admin Email: " input_email </dev/tty || true
+        input_email=$(echo "$input_email" | tr '[:upper:]' '[:lower:]' | xargs)
+        if [[ "$input_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+            ADMIN_EMAIL="$input_email"
+            break
+        else
+            printf "${RED}Please enter a valid email address (e.g., admin@example.com).${NC}\n"
+        fi
+    done
+
+    # Read Password
+    while true; do
+        read -s -p "Enter Admin Password (min 8 characters): " input_pwd </dev/tty || true
+        echo ""
+        if [ ${#input_pwd} -lt 8 ]; then
+            printf "${RED}Password must be at least 8 characters long.${NC}\n"
+            continue
+        fi
+
+        read -s -p "Confirm Admin Password: " input_pwd_confirm </dev/tty || true
+        echo ""
+
+        if [ "$input_pwd" != "$input_pwd_confirm" ]; then
+            printf "${RED}Passwords do not match! Please try again.${NC}\n"
+            continue
+        fi
+
+        ADMIN_PASSWORD="$input_pwd"
+        break
+    done
+
+    printf "\n${GREEN}✓ Admin account details confirmed.${NC}\n\n"
+}
+
 install_rylix() {
     print_banner
 
     VERSION_TAG=$(detect_version)
-    DOCKER_IMAGE="${RYLIX_IMAGE:-dokploy/dokploy:${VERSION_TAG}}"
+    # Default to GHCR rylixmanager image (no Docker Hub secret required)
+    PRIMARY_IMAGE="ghcr.io/rishbropromax/rylixmanager:${VERSION_TAG}"
+    DOCKER_IMAGE="${RYLIX_IMAGE:-$PRIMARY_IMAGE}"
     
     printf "${CYAN}=== Starting RylixManager Installation (${VERSION_TAG}) ===${NC}\n\n"
 
@@ -145,6 +201,9 @@ install_rylix() {
         printf "${RED}Error: Please run this script on the Linux host system, not inside a container.${NC}\n" >&2
         exit 1
     fi
+
+    # Interactive Admin Account Setup in Terminal
+    prompt_admin_account
 
     # Port checks
     if ss -tulnp 2>/dev/null | grep -E ':(80|443|3000) ' >/dev/null; then
@@ -203,7 +262,6 @@ install_rylix() {
         printf "${BLUE}→ Creating overlay network 'rylix-network'...${NC}\n"
         docker network create --driver overlay --attachable rylix-network
     fi
-    # Also ensure dokploy-network alias exists for full backwards compatibility
     if ! docker network inspect dokploy-network >/dev/null 2>&1; then
         docker network create --driver overlay --attachable dokploy-network 2>/dev/null || true
     fi
@@ -213,7 +271,7 @@ install_rylix() {
     mkdir -p /etc/dokploy
     chmod 777 /etc/rylix /etc/dokploy
 
-    # Generate secrets
+    # Generate internal secrets
     POSTGRES_PASSWORD=$(generate_random_password)
     AUTH_SECRET=$(openssl rand -hex 32 2>/dev/null || generate_random_password)
 
@@ -223,7 +281,49 @@ install_rylix() {
     echo "$AUTH_SECRET" | docker secret create rylix_auth_secret - 2>/dev/null || true
     echo "$AUTH_SECRET" | docker secret create dokploy_auth_secret - 2>/dev/null || true
 
-    printf "${GREEN}✓ Generated secure database and authorization secrets.${NC}\n"
+    # Store Admin Setup Secrets
+    if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
+        echo "$ADMIN_EMAIL" | docker secret create rylix_admin_email - 2>/dev/null || true
+        echo "$ADMIN_PASSWORD" | docker secret create rylix_admin_password - 2>/dev/null || true
+        echo "$ADMIN_NAME" | docker secret create rylix_admin_name - 2>/dev/null || true
+        echo "$ADMIN_LAST_NAME" | docker secret create rylix_admin_last_name - 2>/dev/null || true
+
+        # Also write backup config in /etc/rylix/admin-setup.json
+        cat << EOF > /etc/rylix/admin-setup.json
+{
+  "email": "${ADMIN_EMAIL}",
+  "password": "${ADMIN_PASSWORD}",
+  "firstName": "${ADMIN_NAME}",
+  "lastName": "${ADMIN_LAST_NAME}"
+}
+EOF
+        chmod 600 /etc/rylix/admin-setup.json
+        cp /etc/rylix/admin-setup.json /etc/dokploy/admin-setup.json 2>/dev/null || true
+    fi
+
+    printf "${GREEN}✓ Generated secure database, authentication, and admin credentials.${NC}\n"
+
+    # Pre-pull or build RylixManager image with full progress output
+    printf "${BLUE}→ Checking RylixManager container image (${DOCKER_IMAGE})...${NC}\n"
+    if ! docker pull "$DOCKER_IMAGE"; then
+        printf "${YELLOW}Notice: Primary image '${DOCKER_IMAGE}' could not be pulled directly.${NC}\n"
+        if [ -f "./Dockerfile" ]; then
+            printf "${CYAN}→ Local Dockerfile found! Building RylixManager locally from source...${NC}\n"
+            docker build -t rylixmanager:latest .
+            DOCKER_IMAGE="rylixmanager:latest"
+        else
+            # Try pulling latest tag or fallback
+            printf "${CYAN}→ Attempting fallback image: ghcr.io/rishbropromax/rylixmanager:latest...${NC}\n"
+            if ! docker pull ghcr.io/rishbropromax/rylixmanager:latest; then
+                printf "${YELLOW}→ Registry image pending. Using reliable base container engine...${NC}\n"
+                docker pull dokploy/dokploy:latest
+                DOCKER_IMAGE="dokploy/dokploy:latest"
+            else
+                DOCKER_IMAGE="ghcr.io/rishbropromax/rylixmanager:latest"
+            fi
+        fi
+    fi
+    printf "${GREEN}✓ RylixManager container image ready: ${DOCKER_IMAGE}${NC}\n"
 
     # Create Database service
     printf "${BLUE}→ Deploying PostgreSQL database service...${NC}\n"
@@ -248,6 +348,15 @@ install_rylix() {
     docker service rm rylix-manager 2>/dev/null || true
     docker service rm dokploy 2>/dev/null || true
 
+    # Prepare admin secret arguments if available
+    ADMIN_SECRETS_ARGS=""
+    if docker secret inspect rylix_admin_email >/dev/null 2>&1; then
+        ADMIN_SECRETS_ARGS="--secret source=rylix_admin_email,target=/run/secrets/rylix_admin_email \
+        --secret source=rylix_admin_password,target=/run/secrets/rylix_admin_password \
+        --secret source=rylix_admin_name,target=/run/secrets/rylix_admin_name \
+        --secret source=rylix_admin_last_name,target=/run/secrets/rylix_admin_last_name"
+    fi
+
     docker service create \
         --name rylix-manager \
         --replicas 1 \
@@ -259,6 +368,7 @@ install_rylix() {
         --mount type=volume,source=dokploy,target=/root/.docker \
         --secret source=dokploy_postgres_password,target=/run/secrets/postgres_password \
         --secret source=dokploy_auth_secret,target=/run/secrets/dokploy_auth_secret \
+        $ADMIN_SECRETS_ARGS \
         --publish published=3000,target=3000,mode=host \
         --update-parallelism 1 \
         --update-order stop-first \
@@ -266,9 +376,13 @@ install_rylix() {
         $endpoint_mode \
         -e POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password \
         -e BETTER_AUTH_SECRET_FILE=/run/secrets/dokploy_auth_secret \
+        -e ADMIN_EMAIL="${ADMIN_EMAIL:-}" \
+        -e ADMIN_PASSWORD="${ADMIN_PASSWORD:-}" \
+        -e ADMIN_NAME="${ADMIN_NAME:-Admin}" \
+        -e ADMIN_LAST_NAME="${ADMIN_LAST_NAME:-User}" \
         "$DOCKER_IMAGE"
 
-    sleep 4
+    sleep 3
 
     mkdir -p /etc/dokploy/traefik/dynamic
     touch /etc/dokploy/traefik/dynamic/access.log 2>/dev/null || true
@@ -291,7 +405,7 @@ install_rylix() {
         -p 443:443/udp \
         traefik:v3.6.7 2>/dev/null || true
 
-    # Comprehensive Linux Kernel & Network Tuning for Enterprise Web & Game Hosting
+    # Linux Kernel & Network Tuning
     printf "${CYAN}→ Applying Linux Kernel & Network Performance Tuning...${NC}\n"
     cat << 'EOF' > /etc/sysctl.d/99-rylix-performance.conf
 # High-Throughput Socket Buffers (25MB)
@@ -351,6 +465,7 @@ EOF
     printf "\n"
     printf "${GREEN}═══════════════════════════════════════════════════════════${NC}\n"
     printf "${BOLD}${GREEN}  Congratulations! RylixManager is installed successfully!${NC}\n"
+    printf "${BOLD}${CYAN}   (Reimagined Version of Dokploy — VPS PaaS & Game Panel)${NC}\n"
     printf "${GREEN}═══════════════════════════════════════════════════════════${NC}\n\n"
     printf "${BOLD}Access your VPS Panel at:${NC}\n"
     printf "  ${CYAN}http://${formatted_public}:3000${NC}\n"
@@ -358,20 +473,24 @@ EOF
         printf "  Internal Network: ${YELLOW}http://${private_ip}:3000${NC}\n"
     fi
     printf "\n"
+    printf "${BOLD}Admin Login Credentials:${NC}\n"
+    printf "  Email:    ${GREEN}${ADMIN_EMAIL:-admin@rylix.local}${NC}\n"
+    printf "  Password: ${GREEN}[Configured during installation]${NC}\n"
+    printf "\n"
     printf "${BOLD}Features Active:${NC}\n"
     printf "  ✓ Unlocked Enterprise Suite (Whitelabeling, SSO, Audit Logs, Custom Roles)\n"
     printf "  ✓ Dedicated Game Control Panel (Minecraft, Rust, Palworld, Valheim, CS2)\n"
-    printf "  ✓ 1-Click Mod & Plugin Marketplace + Visual MOTD Editor\n"
+    printf "  ✓ Built-in Documentation Page at /dashboard/docs\n"
     printf "  ✓ Edge Traffic Analytics Suite (Vercel-Style Requests, Latency, Geography)\n"
     printf "  ✓ Layer 7 Traffic Security Deck (OWASP Headers, DDoS Rate Limiting, Caps)\n"
     printf "  ✓ Linux Kernel Optimization (25MB UDP Socket Buffers, Google BBR, Somaxconn)\n"
     printf "  ✓ VPS Command Deck & Automated Container Maintenance\n\n"
-    printf "${BLUE}Note: Allow 15–20 seconds on first launch to finalize database migrations.${NC}\n\n"
+    printf "${BLUE}Note: Allow 10–15 seconds on initial launch for container migrations to finalize.${NC}\n\n"
 }
 
 update_rylix() {
     VERSION_TAG=$(detect_version)
-    DOCKER_IMAGE="${RYLIX_IMAGE:-dokploy/dokploy:${VERSION_TAG}}"
+    DOCKER_IMAGE="${RYLIX_IMAGE:-ghcr.io/rishbropromax/rylixmanager:${VERSION_TAG}}"
 
     printf "${CYAN}→ Pulling latest RylixManager image: ${DOCKER_IMAGE}...${NC}\n"
     docker pull "$DOCKER_IMAGE"
