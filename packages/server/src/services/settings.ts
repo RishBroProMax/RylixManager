@@ -50,7 +50,7 @@ export const getUpdateData = async (
 ): Promise<IUpdateData> => {
 	try {
 		const baseUrl =
-			"https://hub.docker.com/v2/repositories/dokploy/dokploy/tags";
+			"https://hub.docker.com/v2/repositories/imrishmika/rylixmanager/tags";
 		let url: string | null = `${baseUrl}?page_size=100`;
 		let allResults: { digest: string; name: string }[] = [];
 
@@ -61,12 +61,18 @@ export const getUpdateData = async (
 				headers: { "Content-Type": "application/json" },
 			});
 
+			if (!response.ok) {
+				break;
+			}
+
 			const data = (await response.json()) as {
 				next: string | null;
 				results: { digest: string; name: string }[];
 			};
 
-			allResults = allResults.concat(data.results);
+			if (Array.isArray(data?.results)) {
+				allResults = allResults.concat(data.results);
+			}
 			url = data?.next;
 		}
 
@@ -288,14 +294,14 @@ export const reloadDockerResource = async (
 	const resourceType = await getDockerResourceType(resourceName, serverId);
 	let command = "";
 	if (resourceType === "service") {
-		if (resourceName === "dokploy") {
+		if (resourceName === "dokploy" || resourceName === "rylix-manager") {
 			const currentImageTag = getDokployImageTag();
 			let imageTag = version;
 			if (currentImageTag === "canary" || currentImageTag === "feature") {
 				imageTag = currentImageTag;
 			}
 
-			command = `docker service update --force --image dokploy/dokploy:${imageTag} ${resourceName}`;
+			command = `docker service update --force --image imrishmika/rylixmanager:${imageTag} ${resourceName}`;
 		} else {
 			command = `docker service update --force ${resourceName}`;
 		}

@@ -562,13 +562,22 @@ export const settingsRouter = createTRPCRouter({
 				"update",
 				"--force",
 				"--image",
-				`dokploy/dokploy:${data.latestVersion}`,
-				"dokploy",
-			]);
+				`imrishmika/rylixmanager:${data.latestVersion}`,
+				"rylix-manager",
+			]).catch(() => {
+				void spawnAsync("docker", [
+					"service",
+					"update",
+					"--force",
+					"--image",
+					`imrishmika/rylixmanager:${data.latestVersion}`,
+					"dokploy",
+				]);
+			});
 			await audit(ctx, {
 				action: "update",
 				resourceType: "settings",
-				resourceName: "dokploy-version",
+				resourceName: "rylix-version",
 			});
 		}
 

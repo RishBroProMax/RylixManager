@@ -133,18 +133,22 @@ prompt_admin_account() {
         return
     fi
 
-    # Read Name
-    read -p "Enter Admin First Name [Admin]: " input_name </dev/tty || true
+    # Read First Name
+    printf "Enter Admin First Name [Admin]: "
+    read -r input_name </dev/tty || input_name=""
     ADMIN_NAME="${input_name:-Admin}"
 
-    read -p "Enter Admin Last Name [User]: " input_lastname </dev/tty || true
+    # Read Last Name
+    printf "Enter Admin Last Name [User]: "
+    read -r input_lastname </dev/tty || input_lastname=""
     ADMIN_LAST_NAME="${input_lastname:-User}"
 
     # Read Email
     while true; do
-        read -p "Enter Admin Email: " input_email </dev/tty || true
-        input_email=$(echo "$input_email" | tr '[:upper:]' '[:lower:]' | xargs)
-        if [[ "$input_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
+        printf "Enter Admin Email: "
+        read -r input_email </dev/tty || input_email=""
+        input_email=$(echo "$input_email" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')
+        if [ -n "$input_email" ] && echo "$input_email" | grep -q -E '^[^@[:space:]]+@[^@[:space:]]+\.[^@[:space:]]+$'; then
             ADMIN_EMAIL="$input_email"
             break
         else
@@ -154,14 +158,20 @@ prompt_admin_account() {
 
     # Read Password
     while true; do
-        read -s -p "Enter Admin Password (min 8 characters): " input_pwd </dev/tty || true
+        printf "Enter Admin Password (min 8 characters): "
+        stty -echo 2>/dev/null || true
+        read -r input_pwd </dev/tty || input_pwd=""
+        stty echo 2>/dev/null || true
         echo ""
         if [ ${#input_pwd} -lt 8 ]; then
             printf "${RED}Password must be at least 8 characters long.${NC}\n"
             continue
         fi
 
-        read -s -p "Confirm Admin Password: " input_pwd_confirm </dev/tty || true
+        printf "Confirm Admin Password: "
+        stty -echo 2>/dev/null || true
+        read -r input_pwd_confirm </dev/tty || input_pwd_confirm=""
+        stty echo 2>/dev/null || true
         echo ""
 
         if [ "$input_pwd" != "$input_pwd_confirm" ]; then
@@ -306,20 +316,34 @@ EOF
     # Pre-pull or build RylixManager image with full progress output
     printf "${BLUE}→ Checking RylixManager container image (${DOCKER_IMAGE})...${NC}\n"
     if ! docker pull "$DOCKER_IMAGE"; then
-        printf "${YELLOW}Notice: Primary image '${DOCKER_IMAGE}' could not be pulled directly.${NC}\n"
-        printf "${CYAN}→ Trying GHCR fallback: ${FALLBACK_IMAGE}...${NC}\n"
-        if ! docker pull "$FALLBACK_IMAGE"; then
-            if [ -f "./Dockerfile" ]; then
+        printf "${YELLOW}Notice: Primary image '${DOCKER_IMAGE}' not found on Docker Hub.${NC}\n"
+        printf "${CYAN}→ Trying Docker Hub latest: imrishmika/rylixmanager:latest...${NC}\n"
+        if docker pull imrishmika/rylixmanager:latest; then
+            DOCKER_IMAGE="imrishmika/rylixmanager:latest"
+        else
+            printf "${CYAN}→ Trying GHCR fallback: ${FALLBACK_IMAGE}...${NC}\n"
+            if docker pull "$FALLBACK_IMAGE"; then
+                DOCKER_IMAGE="$FALLBACK_IMAGE"
+            elif docker pull "ghcr.io/rishbropromax/rylixmanager:latest"; then
+                DOCKER_IMAGE="ghcr.io/rishbropromax/rylixmanager:latest"
+            elif [ -f "./Dockerfile" ]; then
                 printf "${CYAN}→ Local Dockerfile found! Building RylixManager locally from source...${NC}\n"
                 docker build -t rylixmanager:latest .
                 DOCKER_IMAGE="rylixmanager:latest"
             else
-                printf "${YELLOW}→ Registry image pending. Using reliable base container engine...${NC}\n"
-                docker pull dokploy/dokploy:latest
-                DOCKER_IMAGE="dokploy/dokploy:latest"
+                printf "${CYAN}→ Fetching source repository to build RylixManager locally...${NC}\n"
+                TEMP_SRC=$(mktemp -d)
+                git clone --depth 1 https://github.com/RishBroProMax/rylixmanager.git "$TEMP_SRC" 2>/dev/null || true
+                if [ -f "$TEMP_SRC/Dockerfile" ]; then
+                    (cd "$TEMP_SRC" && docker build -t rylixmanager:latest .)
+                    DOCKER_IMAGE="rylixmanager:latest"
+                    rm -rf "$TEMP_SRC"
+                else
+                    printf "${RED}Error: Could not retrieve RylixManager image from imrishmika/rylixmanager or ghcr.io.${NC}\n"
+                    printf "${RED}Please verify that the GitHub Actions 'Docker Build & Release' workflow has completed.${NC}\n"
+                    exit 1
+                fi
             fi
-        else
-            DOCKER_IMAGE="$FALLBACK_IMAGE"
         fi
     fi
     printf "${GREEN}✓ RylixManager container image ready: ${DOCKER_IMAGE}${NC}\n"
@@ -330,7 +354,7 @@ EOF
     docker service rm dokploy-postgres 2>/dev/null || true
 
     docker service create \
-        --name rylix-postgres \
+        --name dokploy-postgres \
         --constraint 'node.role==manager' \
         --network rylix-network \
         --network dokploy-network \
@@ -373,6 +397,10 @@ EOF
         --update-order stop-first \
         --constraint 'node.role == manager' \
         $endpoint_mode \
+        -e POSTGRES_HOST=dokploy-postgres \
+        -e POSTGRES_USER=dokploy \
+        -e POSTGRES_DB=dokploy \
+        -e POSTGRES_PORT=5432 \
         -e POSTGRES_PASSWORD_FILE=/run/secrets/postgres_password \
         -e BETTER_AUTH_SECRET_FILE=/run/secrets/dokploy_auth_secret \
         -e ADMIN_EMAIL="${ADMIN_EMAIL:-}" \
@@ -489,10 +517,21 @@ EOF
 
 update_rylix() {
     VERSION_TAG=$(detect_version)
-    DOCKER_IMAGE="${RYLIX_IMAGE:-ghcr.io/rishbropromax/rylixmanager:${VERSION_TAG}}"
+    PRIMARY_IMAGE="imrishmika/rylixmanager:${VERSION_TAG}"
+    FALLBACK_IMAGE="ghcr.io/rishbropromax/rylixmanager:${VERSION_TAG}"
+    DOCKER_IMAGE="${RYLIX_IMAGE:-$PRIMARY_IMAGE}"
 
     printf "${CYAN}→ Pulling latest RylixManager image: ${DOCKER_IMAGE}...${NC}\n"
-    docker pull "$DOCKER_IMAGE"
+    if ! docker pull "$DOCKER_IMAGE"; then
+        printf "${YELLOW}Notice: Primary image not found, trying fallback: ${FALLBACK_IMAGE}...${NC}\n"
+        if docker pull "$FALLBACK_IMAGE"; then
+            DOCKER_IMAGE="$FALLBACK_IMAGE"
+        elif docker pull imrishmika/rylixmanager:latest; then
+            DOCKER_IMAGE="imrishmika/rylixmanager:latest"
+        elif docker pull ghcr.io/rishbropromax/rylixmanager:latest; then
+            DOCKER_IMAGE="ghcr.io/rishbropromax/rylixmanager:latest"
+        fi
+    fi
 
     if docker service inspect rylix-manager >/dev/null 2>&1; then
         docker service update --image "$DOCKER_IMAGE" rylix-manager

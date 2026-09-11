@@ -20,10 +20,10 @@ async function generateOpenAPI() {
 		console.log("🔄 Generating OpenAPI specification...");
 
 		const openApiDocument = generateOpenApiDocument(appRouter, {
-			title: "Dokploy API",
+			title: "RylixManager API",
 			version: "1.0.0",
-			baseUrl: "https://your-dokploy-instance.com/api",
-			docsUrl: "https://docs.dokploy.com/api",
+			baseUrl: "https://your-rylix-instance.com/api",
+			docsUrl: "https://github.com/RishBroProMax/rylixmanager#readme",
 			tags: [
 				"admin",
 				"docker",
@@ -62,22 +62,24 @@ async function generateOpenAPI() {
 				"rollback",
 				"volumeBackups",
 				"environment",
+				"traffic",
+				"gameServer",
 			],
 		});
 
 		// Enhance metadata
 		openApiDocument.info = {
-			title: "Dokploy API",
+			title: "RylixManager API",
 			description:
-				"Complete API documentation for Dokploy - Deploy applications, manage databases, and orchestrate your infrastructure. This API allows you to programmatically manage all aspects of your Dokploy instance.",
+				"Complete API documentation for RylixManager (Dokploy Reimagined) - Deploy applications, manage databases, orchestrate game servers, and harden VPS infrastructure.",
 			version: "1.0.0",
 			contact: {
-				name: "Dokploy Team",
-				url: "https://dokploy.com",
+				name: "RylixManager Team",
+				url: "https://github.com/RishBroProMax/rylixmanager",
 			},
 			license: {
-				name: "Apache 2.0",
-				url: "https://github.com/dokploy/dokploy/blob/canary/LICENSE",
+				name: "MIT",
+				url: "https://github.com/RishBroProMax/rylixmanager/blob/main/LICENSE",
 			},
 		};
 
@@ -90,7 +92,7 @@ async function generateOpenAPI() {
 					in: "header",
 					name: "x-api-key",
 					description:
-						"API key authentication. Generate an API key from your Dokploy dashboard under Settings > API Keys.",
+						"API key authentication. Generate an API key from your RylixManager dashboard under Settings > API Keys.",
 				},
 			},
 		};
@@ -105,7 +107,7 @@ async function generateOpenAPI() {
 		// Add external docs
 		openApiDocument.externalDocs = {
 			description: "Full documentation",
-			url: "https://docs.dokploy.com",
+			url: "https://github.com/RishBroProMax/rylixmanager#readme",
 		};
 
 		// Write to root of repo
@@ -121,11 +123,10 @@ async function generateOpenAPI() {
 		console.log(
 			`📊 Endpoints: ${Object.keys(openApiDocument.paths || {}).length}`,
 		);
+		process.exit(0);
 	} catch (error) {
 		console.error("❌ Error generating OpenAPI specification:", error);
 		process.exit(1);
-	} finally {
-		process.exit(0);
 	}
 }
 
